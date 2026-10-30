@@ -227,9 +227,17 @@
         }
         
         dispatch_async(dispatch_get_main_queue(), ^{
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Changes Applied" 
-                message:@"Daemons restarted successfully. Hook settings are now active."
-                preferredStyle:UIAlertControllerStyleAlert];
+            UIAlertController *alert;
+            if (result == 0) {
+                alert = [UIAlertController alertControllerWithTitle:@"Changes Applied" 
+                    message:@"Daemons restarted successfully. Hook settings are now active."
+                    preferredStyle:UIAlertControllerStyleAlert];
+            } else {
+                NSString *errorMessage = (stdErr && stdErr.length > 0) ? stdErr : ((stdOut && stdOut.length > 0) ? stdOut : @"An unknown error occurred.");
+                alert = [UIAlertController alertControllerWithTitle:@"Error" 
+                    message:[NSString stringWithFormat:@"Failed to restart daemons (code %d):\n%@", result, errorMessage]
+                    preferredStyle:UIAlertControllerStyleAlert];
+            }
             
             UIAlertAction *ok = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
             [alert addAction:ok];
@@ -254,7 +262,7 @@
     return 2; // Section 0: Apps, Section 1: Advanced
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { 
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     if (section == 0) {
         return self.apps.count - 1; // Exclude the placeholder
     } else {
@@ -334,4 +342,3 @@
 }
 
 @end
-
