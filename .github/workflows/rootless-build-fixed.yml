@@ -1,0 +1,53 @@
+name: TrollDecryptJB rootless build (fixed)
+
+on:
+  push:
+    branches:
+      - fix/p7-safe-process-spawn-rootless-build
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          brew install ldid dpkg
+
+      - name: Install Theos and iOS SDKs
+        run: |
+          git clone --recursive https://github.com/theos/theos.git "$HOME/theos"
+          rm -rf "$HOME/theos/sdks"
+          git clone https://github.com/theos/sdks.git "$HOME/theos/sdks"
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+          echo "$HOME/theos/bin" >> "$GITHUB_PATH"
+
+      - name: Build rootless package
+        run: |
+          make clean
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+
+      - name: Verify package output
+        run: |
+          set -e
+          find packages -maxdepth 1 -type f -name '*.deb' -print
+          test -n "$(find packages -maxdepth 1 -type f -name '*.deb' -print -quit)"
+          for deb in packages/*.deb; do
+            dpkg-deb --info "$deb"
+            dpkg-deb --contents "$deb" | head -200
+          done
+
+      - name: Upload Debian package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrollDecryptJB-rootless-deb
+          path: packages/*.deb
+          if-no-files-found: warn
+          retention-days: 14
