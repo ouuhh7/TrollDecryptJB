@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - fix/p7-safe-process-spawn-rootless-build
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -23,15 +23,18 @@ jobs:
 
       - name: Install Theos and iOS SDKs
         run: |
+          rm -rf "$HOME/theos"
           git clone --recursive https://github.com/theos/theos.git "$HOME/theos"
+          rm -rf "$HOME/theos/sdks"
           git clone https://github.com/theos/sdks.git "$HOME/theos/sdks"
           echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
           echo "$HOME/theos/bin" >> "$GITHUB_PATH"
 
       - name: Build rootless package
         run: |
+          set -e
           make clean
-          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless -j$(sysctl -n hw.ncpu)
 
       - name: Verify package output
         run: |
